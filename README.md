@@ -25,3 +25,7 @@ python pipeline.py
 - 53% of data has missing metrics
 - Systematic decimal error in speed corrected
 - Quality scoring system (0.0-1.0) flags data issues
+
+## Author
+Matt Raymond Ayento
+G30, 3rd year Automotive Engineering (Electrical, Electronics, Information Engineering)
