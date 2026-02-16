@@ -1,5 +1,6 @@
 import mysql.connector
 import pandas as pd
+import numpy as np
 from config import DB_CONFIG
 from typing import Dict
 import logging
@@ -22,6 +23,8 @@ def load_to_mysql(transformed_data: Dict[str, pd.DataFrame]):
         
         segments_df = transformed_data['segments']
         
+        segments_df = segments_df.replace({np.nan: None})
+        
         insert_segment_query = """
         INSERT IGNORE INTO road_segments 
         (segment_id, street_name, latitude, longitude, 
@@ -36,6 +39,8 @@ def load_to_mysql(transformed_data: Dict[str, pd.DataFrame]):
         logger.info(f"Inserted {cursor.rowcount} segments")
         
         readings_df = transformed_data['readings']
+        
+        readings_df = readings_df.replace({np.nan: None})
         
         insert_reading_query = """
         INSERT INTO traffic_readings

@@ -43,4 +43,4 @@ def run_pipeline(input_file: str, chunk_size: int = 5000):
         raise
 
 if __name__ == '__main__':
-    run_pipeline('../data_january1.json')
+    run_pipeline('data_january1.json')

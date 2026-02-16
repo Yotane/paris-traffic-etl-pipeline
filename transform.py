@@ -111,12 +111,22 @@ def transform_traffic_data(raw_chunk: List[Dict]) -> Dict[str, pd.DataFrame]:
     
     # Step 7: Prepare traffic_readings table
     readings_df = df_clean[['iu_ac', 't_1h', 'q', 'k', 'etat_trafic', 
-                             'etat_barre', 'is_speed_corrected', 
-                             'data_quality_flag', 'quality_score']].copy()
-    
+                            'etat_barre', 'is_speed_corrected',
+                            'data_quality_flag', 'quality_score']].copy()
+
     readings_df.columns = ['segment_id', 'timestamp', 'traffic_flow', 'avg_speed',
-                           'traffic_state', 'sensor_status', 'is_speed_corrected',
-                           'data_quality_flag', 'quality_score']
+                        'traffic_state', 'sensor_status', 'is_speed_corrected',
+                        'data_quality_flag', 'quality_score']
+
+    readings_df['timestamp'] = pd.to_datetime(readings_df['timestamp'])
+    readings_df['is_flow_imputed'] = False
+
+
+    readings_df = readings_df[[
+        'segment_id', 'timestamp', 'traffic_flow', 'avg_speed',
+        'traffic_state', 'sensor_status', 'is_flow_imputed', 'is_speed_corrected',
+        'data_quality_flag', 'quality_score'
+    ]]
     
     readings_df['timestamp'] = pd.to_datetime(readings_df['timestamp'])
     readings_df['is_flow_imputed'] = False
