@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 # Road Segment Models
 class RoadSegmentBase(BaseModel):
@@ -17,8 +17,8 @@ class RoadSegmentCreate(RoadSegmentBase):
 
 class RoadSegmentResponse(RoadSegmentBase):
     segment_id: str
-    sensor_install_date: Optional[str] = None
-    sensor_end_date: Optional[str] = None
+    sensor_install_date: Optional[date] = None
+    sensor_end_date: Optional[date] = None
     created_at: Optional[datetime] = None
 
     class Config:
