@@ -28,4 +28,5 @@ python pipeline.py
 
 ## Author
 Matt Raymond Ayento
+Nagoya University
 G30, 3rd year Automotive Engineering (Electrical, Electronics, Information Engineering)
