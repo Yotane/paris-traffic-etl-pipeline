@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 # Road Segment Models
 class RoadSegmentBase(BaseModel):
@@ -17,8 +17,8 @@ class RoadSegmentCreate(RoadSegmentBase):
 
 class RoadSegmentResponse(RoadSegmentBase):
     segment_id: str
-    sensor_install_date: Optional[str] = None
-    sensor_end_date: Optional[str] = None
+    sensor_install_date: Optional[date] = None
+    sensor_end_date: Optional[date] = None
     created_at: Optional[datetime] = None
 
     class Config:
@@ -47,3 +47,45 @@ class TrafficReadingResponse(TrafficReadingBase):
     class Config:
         from_attributes = True
 
+# Analytics Models
+class PeakHourResponse(BaseModel):
+    hour: int
+    avg_flow: Optional[float] = None
+    avg_speed: Optional[float] = None
+    reading_count: int
+
+class BusiestSegmentResponse(BaseModel):
+    segment_id: str
+    street_name: str
+    avg_flow: Optional[float] = None
+    avg_speed: Optional[float] = None
+    reading_count: int
+
+class SpeedStatsResponse(BaseModel):
+    segment_id: Optional[str] = None
+    mean_speed: float
+    median_speed: float
+    std_dev: float
+    percentile_25: float
+    percentile_75: float
+    min_speed: float
+    max_speed: float
+    sample_size: int
+
+class QualityReportResponse(BaseModel):
+    data_quality_flag: str
+    count: int
+    percentage: float
+    avg_quality_score: float
+
+class CongestionHotspotResponse(BaseModel):
+    segment_id: str
+    street_name: str
+    blocked_count: int
+    saturated_count: int
+    total_incidents: int
+
+# Pagination Model
+class PaginationParams(BaseModel):
+    skip: int = Field(default=0, ge=0)
+    limit: int = Field(default=100, ge=1, le=1000)
