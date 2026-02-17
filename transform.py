@@ -51,23 +51,44 @@ def transform_traffic_data(raw_chunk: List[Dict]) -> Dict[str, pd.DataFrame]:
     def assign_quality_flag(row) -> Tuple[str, float]:
         """
         Assign quality flag and score (0.0-1.0) based on data quality.
-        Higher score = better quality.
+        
+        Thresholds based on:
+        - Paris average rush hour speed: 19 km/h
+        - Typical Paris city speeds: 13-17 km/h
+        - Urban arterial capacity: 1,100-1,900 veh/hr/lane
+        - Maximum flow at 40-60 km/h (not at high speeds)
+        
+        Returns:
+            Tuple of (flag_name, quality_score)
         """
-        # Tier 1: Corrected data
+        
+        # Tier 1: Corrected decimal errors
         if row.get('is_speed_corrected', False):
             return 'CORRECTED_DECIMAL_ERROR', 0.7
         
-        # Tier 2: Check for inconsistencies
+        # Tier 2: Check for genuine inconsistencies
         if pd.notna(row['k']) and pd.notna(row['q']):
-            # High speed but blocked/saturated state
-            if row['k'] > 50 and row['etat_trafic'] in ['Bloqué', 'Saturé']:
+            
+            # High speed + blocked state (physically impossible)
+            # Traffic can't be flowing at 60+ km/h if it's "blocked"
+            if row['k'] > 60 and row['etat_trafic'] in ['Bloqué', 'Saturé']:
                 return 'INCONSISTENT_SPEED_STATE', 0.5
             
-            # Very high flow with very low speed
-            if row['q'] > 500 and row['k'] < 15:
-                return 'INCONSISTENT_FLOW_SPEED', 0.4
+            # Extremely high flow with unrealistically low speed
+            # If flow > 2000 veh/hr (above lane capacity) but speed < 5 km/h
+            # This suggests either sensor malfunction or remaining decimal error
+            if row['q'] > 2000 and row['k'] < 5:
+                return 'INCONSISTENT_EXTREME_FLOW_SPEED', 0.3
+            
+            # Very high flow at moderate-low speed (this is NORMAL for Paris!)
+            # Paris rush hour: 500-1500 veh/hr at 10-25 km/h is typical
+            # DON'T flag this as inconsistent anymore
+            
+            # Zero or near-zero speed with high flow (cars can't flow if stopped)
+            if row['q'] > 100 and row['k'] < 2:
+                return 'INCONSISTENT_STOPPED_WITH_FLOW', 0.4
         
-        # Tier 3: Sensor status issues
+        # Tier 3: Sensor quality issues
         if row['etat_barre'] == 'Invalide':
             if pd.notna(row['q']) or pd.notna(row['k']):
                 return 'INVALID_SENSOR_HAS_DATA', 0.6
