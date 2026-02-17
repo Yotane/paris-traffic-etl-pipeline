@@ -1,3 +1,5 @@
+USE paris_traffic;
+
 CREATE TABLE road_segments (
     segment_id VARCHAR(50) PRIMARY KEY,
     street_name VARCHAR(255) NOT NULL,
