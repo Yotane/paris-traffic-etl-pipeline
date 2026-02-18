@@ -91,6 +91,7 @@ JSON Source (Kaggle) ──> Python ETL (pipeline.py) ──> MySQL Database
                            Data Cleaning            FastAPI (API Layer)
                         (Decimal Correction)              │
                                  └──────────────────> Swagger UI / Docs
+```
 
 ### Run API
 ```bash
