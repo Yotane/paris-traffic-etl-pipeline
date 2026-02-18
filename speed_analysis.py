@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-with open('data_january1.json', 'r') as f:
+with open('Data/data_january1.json', 'r') as f:
     data = json.load(f)
 
 df = pd.DataFrame(data)
