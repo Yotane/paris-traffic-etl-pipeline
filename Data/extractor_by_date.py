@@ -2,32 +2,37 @@ import ijson
 import json
 from decimal import Decimal
 import os
+import argparse
 
-# --- CONFIGURATION ---
-INPUT_FILE = "local_merged_data_01_04.json"
-TARGET_MONTH = "2023-01" 
-OUTPUT_FILE = f"data_sample_{TARGET_MONTH}.json"
-LIMIT = 62622  # Stop after this many matches
+INPUT_FILE = "Data/local_merged_data_01_04.json"
 
 def decimal_default(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
-def run_extraction():
+
+def run_extraction(target_date: str, limit: int = None):
+    #Extract records for a specific date from large JSON file.
+
+    output_file = f"Data/data_{target_date}.json"
+    
     if not os.path.exists(INPUT_FILE):
         print(f"Error: Could not find {INPUT_FILE}")
-        return
+        return None
 
-    print(f"Starting sample extraction (Limit: {LIMIT})...")
+    print(f"Extracting data for date: {target_date}")
+    if limit:
+        print(f"Limit: {limit} records")
+    
     count = 0
     total_processed = 0
 
     with open(INPUT_FILE, 'rb') as f:
         parser = ijson.items(f, 'item')
         
-        with open(OUTPUT_FILE, 'w') as out_f:
-            out_f.write('[') 
+        with open(output_file, 'w') as out_f:
+            out_f.write('[')
             first = True
             
             try:
@@ -35,33 +40,43 @@ def run_extraction():
                     total_processed += 1
                     timestamp = record.get('t_1h', '')
                     
-                    if timestamp and timestamp.startswith(TARGET_MONTH):
-                        # OPTIONAL: Remove the heavy geometry to make VS Code even happier
-                        # record.pop('geo_shape', None) 
-                        
+                    if timestamp and timestamp.startswith(target_date):
                         if not first:
                             out_f.write(',')
                         
                         json.dump(record, out_f, default=decimal_default)
-                        
                         first = False
                         count += 1
                         
-                        if count % 1000 == 0:
+                        if count % 5000 == 0:
                             print(f"Found {count} matches...")
-
-                        # STOP HERE
-                        if count >= LIMIT:
-                            print(f"Reached limit of {LIMIT} matches. Stopping.")
+                        
+                        if limit and count >= limit:
+                            print(f"Reached limit of {limit}. Stopping.")
                             break
-
+                            
             except Exception as e:
-                print(f"\nAn error occurred: {e}")
+                print(f"Error: {e}")
                 
-            out_f.write(']') 
+            out_f.write(']')
 
-    print(f"\nFinished!")
-    print(f"Total records saved to {OUTPUT_FILE}: {count}")
+    print(f"Saved {count} records to {output_file}")
+    return output_file
 
 if __name__ == "__main__":
-    run_extraction()
+    parser = argparse.ArgumentParser(description='Extract Paris traffic data for a specific date')
+    parser.add_argument(
+        '--date',
+        type=str,
+        default='2023-01-01',
+        help='Date to extract in YYYY-MM-DD format (default: 2023-01-01)'
+    )
+    parser.add_argument(
+        '--limit',
+        type=int,
+        default=None,
+        help='Max records to extract (default: all records for that date)'
+    )
+    
+    args = parser.parse_args()
+    run_extraction(args.date, args.limit)
