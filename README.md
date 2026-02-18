@@ -66,8 +66,8 @@ Furthermore, I researched on real Paris traffic data to further optimize the thr
 ### Installation
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/paris-traffic-etl.git
-cd paris-traffic-etl
+git clone https://github.com/Yotane/paris-traffic-etl-pipeline.git
+cd paris-traffic-etl-pipeline
 
 # Install dependencies
 pip install -r requirements.txt
