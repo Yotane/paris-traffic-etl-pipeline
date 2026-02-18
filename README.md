@@ -18,7 +18,7 @@ Class Imbalance: Present in etat_trafic — requires resampling or cost-sensitiv
 Upon checking, I found that there around 40% missing both q and k and around 80% of sensors are marked invalid.
 Most importantly, the dataset has a lot of decimal errors.(speeds like 0.43 km/h - should be 43 km/h)
 
-**Initial Observation:** Mean speed of 4.88 km/h seemed suspiciously low.
+**Initial Observation:** Mean speed of 4.88 km/h and other instances seemed suspiciously low.
 
 **Hypothesis Testing:**
 Rather than blindly assuming a decimal error, I investigated whether low speeds could be legitimate (e.g., sensor failures, gridlock conditions).
@@ -85,11 +85,12 @@ python pipeline.py --date 2023-01-02
 python pipeline.py --start-date 2023-01-02 --end-date 2023-01-07
 ```
 ### Architecture
+```text
 JSON Source (Kaggle) ──> Python ETL (pipeline.py) ──> MySQL Database
                                  │                        │
                            Data Cleaning            FastAPI (API Layer)
                         (Decimal Correction)              │
-                                 └──────────────────> Swagger UI / Frontend
+                                 └──────────────────> Swagger UI / Docs
 
 ### Run API
 ```bash
