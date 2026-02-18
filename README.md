@@ -51,6 +51,13 @@ In the ETL, transform.py cleans and transforms raw traffic data with tiered qual
 Three files for ETL"
 extract.py, transform.py, load.py. And pipeline.py runs them in order.
 
+Furthermore, I researched on real Paris traffic data to further optimize the thresholds in the quality flag assessment in transform.py:
+        Thresholds based on:
+        - Paris average rush hour speed: 19 km/h
+        - Typical Paris city speeds: 13-17 km/h
+        - Urban arterial capacity: 1,100-1,900 veh/hr/lane
+        - Maximum flow at 40-60 km/h (not at high speeds)
+
 ### Prerequisites
 - Python 3.13+
 - MySQL 8.0+
@@ -148,7 +155,7 @@ curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
 
 ## Future Roadmap
 * **Dockerization:** Containerize the API and MySQL for "one-click" deployment.
-* **CI/CD Pipeline:** Implement GitHub Actions to run `pytest` on every push.
+* **Web Application:** Build a frontend web application to transform the API's anayltics into charts and other diagrams.
 * **Real-time Integration:** Connect to the [Paris Open Data API](https://opendata.paris.fr/) for live traffic updates instead of static 2023 data.
 
 ## Technical Stack
