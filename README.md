@@ -125,7 +125,7 @@ POST   /readings              Create reading
 DELETE /readings/{id}         Delete reading
 ```
 
-### Analytics (Complex SQL + NumPy)
+### Analytics
 ```
 GET /analytics/peak-hours             Traffic by hour
 GET /analytics/busiest-segments       Ranked by flow
@@ -159,14 +159,14 @@ curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
 * **Real-time Integration:** Connect to the [Paris Open Data API](https://opendata.paris.fr/) for live traffic updates instead of static 2023 data.
 
 ## Technical Stack
-Language: Python 3.13
-API Framework: FastAPI
-Database: MySQL 8.0 (Relational storage & indexing)
-Data Processing: Pandas (ETL) & NumPy (Analytics)
-Validation: Pydantic (Data schemas & type safety)
-Version Control: Git & GitHub (Feature-branch workflow)
-Documentation: Swagger UI / OpenAPI (Interactive API testing interface)
-Server: Uvicorn (ASGI implementation)
+* Language: Python 3.13
+* API Framework: FastAPI
+* Database: MySQL 8.0 (Relational storage & indexing)
+* Data Processing: Pandas (ETL) & NumPy (Analytics)
+* Validation: Pydantic (Data schemas & type safety)
+* Version Control: Git & GitHub (Feature-branch workflow)
+* Documentation: Swagger UI / OpenAPI (Interactive API testing interface)
+* Server: Uvicorn (ASGI implementation)
 
 ## Author
 Matt Raymond Ayento
