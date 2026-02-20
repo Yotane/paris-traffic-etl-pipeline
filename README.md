@@ -120,7 +120,7 @@ JSON Source (Kaggle) ──> Python ETL (pipeline.py) ──> MySQL Database
 **Note:** Statistics reflect January 1-2, 2023 data (two days loaded to verify incremental loading functionality).
 
 ### Dataset Statistics
-- **Raw input:** 62,622 records (Jan 1) + additional records (Jan 2)
+- **Raw input:** Jan 1: 62,622 records + Jan 2: 71,568 records = 134,190 records
 - **Total loaded:** 79,919 traffic readings across 2 days
 - **Processing time:** ~7.6 seconds per day
 - **Data quality:**
