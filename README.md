@@ -1,4 +1,5 @@
 # Paris Traffic Data Pipeline
+**Data Engineering portfolio project demonstrating ETL pipeline design, API development, and data quality management.**
 
 ETL pipeline for processing and analyzing Paris road traffic sensor data (2023) obtained from:
 https://www.kaggle.com/datasets/chafikboulealam/local-merged-data
@@ -79,26 +80,81 @@ USE paris_traffic;
 SOURCE SQL/schema.sql;
 
 # Configure database credentials
-cp config.py
+# Copy config template
+cp config.example.py config.py
+
 # Edit config.py with your MySQL password
+# (config.py is in .gitignore for security)
 
 ### Run ETL Pipeline
-```bash
-# Load January 1st (included already)
-python pipeline.py --file Data/data_january1.json
 
-# Load additional days (requires full dataset)
-python pipeline.py --date 2023-01-02
-python pipeline.py --start-date 2023-01-02 --end-date 2023-01-07
+### Initial Dataset
+The project includes January 1st, 2023 data (62,622 records) as the initial dataset. The full source file contains 2.2M+ records but is too large to include in the repository.
+```bash
+# Load included January 1st data
+python pipeline.py --file Data/data_january1.json
 ```
+
+### Load Additional Days
+If you have access to the full dataset (`local_merged_data_01_04.json`), you can incrementally add more days using `extract.py`:
+```bash
+# Extract and load a single day
+python pipeline.py --date 2023-01-02
+
+# Extract and load a date range
+python pipeline.py --start-date 2023-01-02 --end-date 2023-01-07
+
+# The pipeline handles duplicates automatically - safe to re-run
+```
+
 ### Architecture
 ```text
 JSON Source (Kaggle) ──> Python ETL (pipeline.py) ──> MySQL Database
                                  │                        │
                            Data Cleaning            FastAPI (API Layer)
-                        (Decimal Correction)              │
+                                 │
                                  └──────────────────> Swagger UI / Docs
 ```
+## Project Results
+
+**Note:** Statistics reflect January 1-2, 2023 data (two days loaded to verify incremental loading functionality).
+
+### Dataset Statistics
+- **Raw input:** 62,622 records (Jan 1) + additional records (Jan 2)
+- **Total loaded:** 79,919 traffic readings across 2 days
+- **Processing time:** ~7.6 seconds per day
+- **Data quality:**
+  - Retained: ~80,000 readings (63.3%)
+  - Dropped: ~46,000 rows (36.7% - missing both flow and speed)
+- **Unique road segments:** 1,784 (stable across dates)
+- **Decimal errors corrected:** 13,182 speeds < 1 km/h (multiplied by 100)
+
+### Quality Distribution
+
+| Quality Flag | Count | Percentage | Quality Score |
+|-------------|-------|------------|---------------|
+| INVALID_SENSOR_HAS_DATA | 50,588 | 63.3% | 0.6 |
+| CORRECTED_DECIMAL_ERROR | 13,182 | 16.5% | 0.7 |
+| OK | 6,591 | 8.2% | 1.0 |
+| INCONSISTENT_STOPPED_WITH_FLOW | 6,104 | 7.6% | 0.4 |
+| MISSING_FLOW | 2,498 | 3.1% | 0.8 |
+| MISSING_SPEED | 679 | 0.8% | 0.8 |
+| INCONSISTENT_EXTREME_FLOW_SPEED | 252 | 0.3% | 0.3 |
+| INCONSISTENT_SPEED_STATE | 25 | 0.0% | 0.5 |
+
+**Key Insight:** Only 8.2% of readings are "OK" quality, highlighting the real-world messiness of sensor data and the importance of transparent quality flagging rather than dropping questionable data.
+
+### ETL Performance
+- **Pipeline throughput:** ~8,200 records/second
+- **Memory efficiency:** Generator-based chunking (5,000 records/chunk)
+- **Duplicate handling:** Automatic via `INSERT IGNORE` and `UNIQUE KEY` constraints
+- **Idempotent:** Safe to re-run without creating duplicates
+
+### API Performance
+- **Total endpoints:** 16 (9 CRUD + 6 Analytics + 1 Health)
+- **Response format:** JSON
+- **Documentation:** Auto-generated OpenAPI/Swagger UI
+- **Concurrent requests:** Supported (FastAPI async)
 
 ### Run API
 ```bash
@@ -167,6 +223,9 @@ curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
 * Version Control: Git & GitHub (Feature-branch workflow)
 * Documentation: Swagger UI / OpenAPI (Interactive API testing interface)
 * Server: Uvicorn (ASGI implementation)
+
+## License
+This project is for educational purposes. Dataset sourced from [Kaggle](https://www.kaggle.com/datasets/chafikboulealam/local-merged-data) under their terms of use.
 
 ## Author
 Matt Raymond Ayento
