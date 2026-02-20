@@ -124,8 +124,8 @@ JSON Source (Kaggle) ──> Python ETL (pipeline.py) ──> MySQL Database
 - **Total loaded:** 79,919 traffic readings across 2 days
 - **Processing time:** ~7.6 seconds per day
 - **Data quality:**
-  - Retained: ~80,000 readings (63.3%)
-  - Dropped: ~46,000 rows (36.7% - missing both flow and speed)
+  - Retained: ~84,940 readings (63.3%)
+  - Dropped: ~49,250 rows (36.7% - missing both flow and speed)
 - **Unique road segments:** 1,784 (stable across dates)
 - **Decimal errors corrected:** 13,182 speeds < 1 km/h (multiplied by 100)
 
