@@ -228,6 +228,7 @@ curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
 This project is for educational purposes. Dataset sourced from [Kaggle](https://www.kaggle.com/datasets/chafikboulealam/local-merged-data) under their terms of use.
 
 ## Author
-Matt Raymond Ayento
-Nagoya University
+
+Matt Raymond Ayento  
+Nagoya University  
 G30, 3rd year Automotive Engineering (Electrical, Electronics, Information Engineering)
