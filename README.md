@@ -7,6 +7,21 @@ https://www.kaggle.com/datasets/chafikboulealam/local-merged-data
 Dataset description from Kaggle:
 This dataset contains more than 5,000,000 observations of road traffic conditions in Paris, France, collected during the year 2023. Each entry represents the state of traffic on a specific road segment at a given hourly timestamp. The data is ideal for classification, time-series analysis, and geospatial modeling tasks in intelligent transportation systems and urban mobility research.
 
+### Data Schema Overview
+| Field | Type | Description |
+|-------|------|-------------|
+| `iu_ac` | String | Unique identifier for the road segment (arc) |
+| `libelle` | String | Human-readable street name (e.g., "Bd_de_Belleville") |
+| `t_1h` | Timestamp | Hourly observation time in ISO 8601 format (`2023-01-01T03:00:00+00:00`) |
+| `q` | Float | **Traffic flow**: vehicles per hour passing the sensor (frequently null due to sensor maintenance) |
+| `k` | Float | **Traffic density**: vehicles per kilometer on the segment (fundamental diagram parameter) |
+| `etat_trafic` | String | **Traffic state**: `Fluide` (free-flow), `Dense` (congested), `Sature` (gridlock), or `Inconnu` (unknown) |
+| `iu_nd_amont` / `iu_nd_aval` | String | Upstream/downstream node IDs for network topology analysis |
+| `etat_barre` | String | Sensor validity flag: `Valide` or `Invalide` (used for data quality filtering) |
+| `geo_point_2d` | Object | Centroid coordinates `{lon, lat}` for mapping and spatial joins |
+| `geo_shape` | GeoJSON | `LineString` geometry defining the precise road segment path for geospatial visualization |
+
+
 Originally sourced as a large nested JSON file, this cleaned and structured version has been preprocessed for ease of use in machine learning workflows. It includes both numerical traffic metrics (e.g., flow and speed) and categorical labels (e.g., traffic state), along with rich geospatial metadata.
 
 ## Data Quality
