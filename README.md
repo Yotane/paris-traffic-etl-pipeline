@@ -1,5 +1,5 @@
 # Paris Traffic Data Pipeline
-**Data Engineering portfolio project demonstrating ETL pipeline design, API development, and data quality management.**
+**Data Engineering portfolio project demonstrating ETL pipeline design, API development, and data quality management. Made for educational purposes such as data engineering and API practice.**
 
 ETL pipeline for processing and analyzing Paris road traffic sensor data (2023) obtained from:
 https://www.kaggle.com/datasets/chafikboulealam/local-merged-data
@@ -14,8 +14,8 @@ However this dataset is very messy as it has a lot of missing data:
 q (flow): 52.4% missing
 k (speed): 51.6% missing
 Geospatial & date fields: ~0.7% missing
-Duplicates: Present — should be removed before modeling.
-Class Imbalance: Present in etat_trafic — requires resampling or cost-sensitive learning.
+Duplicates: Present and should be removed before modeling.
+Class Imbalance: Present in etat_trafic and requires resampling or cost-sensitive learning.
 Upon checking, I found that there around 40% missing both q and k and around 80% of sensors are marked invalid.
 Most importantly, the dataset has a lot of decimal errors.(speeds like 0.43 km/h - should be 43 km/h)
 
