@@ -14,7 +14,7 @@ This dataset contains more than 5,000,000 observations of road traffic condition
 | `libelle` | String | Human-readable street name (e.g., "Bd_de_Belleville") |
 | `t_1h` | Timestamp | Hourly observation time in ISO 8601 format (`2023-01-01T03:00:00+00:00`) |
 | `q` | Float | **Traffic flow**: vehicles per hour passing the sensor (frequently null due to sensor maintenance) |
-| `k` | Float | **Traffic density**: vehicles per kilometer on the segment (fundamental diagram parameter) |
+| `k` | Float | **Average speed** (km/h) — frequently null due to sensor maintenance. Values <1 km/h corrected by ETL (decimal placement error). |
 | `etat_trafic` | String | **Traffic state**: `Fluide` (free-flow), `Dense` (congested), `Sature` (gridlock), or `Inconnu` (unknown) |
 | `iu_nd_amont` / `iu_nd_aval` | String | Upstream/downstream node IDs for network topology analysis |
 | `etat_barre` | String | Sensor validity flag: `Valide` or `Invalide` (used for data quality filtering) |
