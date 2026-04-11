@@ -19,12 +19,13 @@ def transform_traffic_data(raw_chunk: List[Dict]) -> Dict[str, pd.DataFrame]:
     
     df = pd.DataFrame(raw_chunk)
     
-    # Step 1: Fix decimal errors in speed
-    df['k_original'] = df['k'].copy()
-    df['is_speed_corrected'] = False
-    
-    decimal_mask = (df['k'] > 0) & (df['k'] < 1)
-    df.loc[decimal_mask, 'k'] = df.loc[decimal_mask, 'k'] * 100
+    # Step 1: Fix decimal placement errors in speed (k field)
+    # Values < 1 km/h are unrealistic for urban traffic; likely sensor decimal error
+    df['k_original'] = df['k'].copy()  # Preserve for audit
+    df['is_speed_corrected'] = False   # Flag corrected records
+
+    decimal_mask = (df['k'] > 0) & (df['k'] < 1)  # Suspiciously low speeds
+    df.loc[decimal_mask, 'k'] = df.loc[decimal_mask, 'k'] * 100  # Fix decimal
     df.loc[decimal_mask, 'is_speed_corrected'] = True
     
     logger.info(f"Fixed {decimal_mask.sum()} decimal errors in speed")
@@ -142,15 +143,6 @@ def transform_traffic_data(raw_chunk: List[Dict]) -> Dict[str, pd.DataFrame]:
     readings_df['timestamp'] = pd.to_datetime(readings_df['timestamp'])
     readings_df['is_flow_imputed'] = False
 
-
-    readings_df = readings_df[[
-        'segment_id', 'timestamp', 'traffic_flow', 'avg_speed',
-        'traffic_state', 'sensor_status', 'is_flow_imputed', 'is_speed_corrected',
-        'data_quality_flag', 'quality_score'
-    ]]
-    
-    readings_df['timestamp'] = pd.to_datetime(readings_df['timestamp'])
-    readings_df['is_flow_imputed'] = False
     
     logger.info(f"Created {len(segments_df)} segments, {len(readings_df)} readings")
     
