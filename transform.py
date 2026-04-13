@@ -151,6 +151,11 @@ def transform_traffic_data(raw_chunk: List[Dict]) -> Dict[str, pd.DataFrame]:
         Tier 4: Sensor status issues -> 0.1-0.6
         Tier 5: Partial missingness -> 0.8
         Tier 6: Fully valid data -> 1.0
+        Domain thresholds based on Paris traffic engineering research:
+        - Average rush hour speed: 19 km/h
+        - Typical city speeds: 13-17 km/h
+        - Urban arterial capacity: 1,100-1,900 veh/hr/lane
+        - Maximum flow occurs at 40-60 km/h (not at very high speeds)
         """
         
         # Tier 1-2: Corrected values (confidence-based scoring)
