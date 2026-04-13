@@ -183,22 +183,23 @@ JSON Source (Kaggle) -> Python ETL (pipeline.py) -> MySQL Database
 - **Unique road segments:** 1,779 (stable across dates, confirms dimension table integrity)
 - **Decimal errors corrected:** 90 records using multi-signal validation (45 HIGH confidence, 45 MEDIUM confidence)
 
-### Quality Distribution (Combined Jan 1-2, Exact Counts)
+### Quality Distribution (Actual Database Results, Jan 1-2 Combined)
 
 | Quality Flag | Count | Percentage | Quality Score |
 |-------------|-------|------------|---------------|
-| INVALID_SENSOR_HAS_DATA | 48,112 | 60.2% | 0.6 |
-| INCONSISTENT_STOPPED_WITH_FLOW | 10,550 | 13.2% | 0.4 |
-| OK | 6,190 | 7.7% | 1.0 |
-| MISSING_FLOW | 2,199 | 2.7% | 0.8 |
-| MISSING_SPEED | 599 | 0.7% | 0.8 |
-| SUSPECTED_DECIMAL_ERROR_LOW | 7,998 | 10.0% | 0.5 |
-| CORRECTED_DECIMAL_ERROR_HIGH | 45 | 0.06% | 0.85 |
-| CORRECTED_DECIMAL_ERROR_MEDIUM | 45 | 0.06% | 0.70 |
-| INCONSISTENT_EXTREME_FLOW_SPEED | 101 | 0.13% | 0.3 |
-| INCONSISTENT_SPEED_STATE | 10 | 0.01% | 0.5 |
+| INVALID_SENSOR_HAS_DATA | 59,655 | 74.64% | 0.6 |
+| INCONSISTENT_STOPPED_WITH_FLOW | 9,769 | 12.22% | 0.4 |
+| OK | 6,756 | 8.45% | 1.0 |
+| MISSING_FLOW | 2,663 | 3.33% | 0.8 |
+| MISSING_SPEED | 679 | 0.85% | 0.8 |
+| INCONSISTENT_EXTREME_FLOW_SPEED | 258 | 0.32% | 0.3 |
+| CORRECTED_DECIMAL_ERROR_HIGH | 74 | 0.09% | 0.85 |
+| CORRECTED_DECIMAL_ERROR_MEDIUM | 40 | 0.05% | 0.7 |
+| INCONSISTENT_SPEED_STATE | 25 | 0.03% | 0.5 |
 
-**Key Insight:** Only 7.7% of readings are "OK" quality, highlighting the real-world messiness of sensor data and the importance of transparent quality flagging rather than dropping questionable data. The tiered correction approach enables downstream analysts to filter by confidence level (e.g., use only HIGH confidence for critical reports). The 10.0% flagged as `SUSPECTED_DECIMAL_ERROR_LOW` represents records that may need manual review but were preserved for transparency.
+**Total readings:** 79,919 (sum of all counts)
+
+**Key Insight:** Only 8.45% of readings are "OK" quality, highlighting the real-world messiness of sensor data. The 74.64% flagged as `INVALID_SENSOR_HAS_DATA` reflects that most Paris traffic sensors were marked invalid in January 2023 but still reported data which is a common issue in municipal IoT deployments. The tiered correction approach (HIGH/MEDIUM confidence) enables downstream analysts to filter for high-confidence records when needed.
 
 ### ETL Performance
 - **Pipeline throughput:** 9,200 records/second (134,190 records / 14.59 seconds total)
@@ -254,17 +255,7 @@ curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
 
 **Actual Response (dataset was only January 1 and 2):**
 ```json
-{
-  "segment_id": null,
-  "mean_speed": 10.05,
-  "median_speed": 8.05,
-  "std_dev": 8.41,
-  "percentile_25": 4.35,
-  "percentile_75": 12.6,
-  "min_speed": 0,
-  "max_speed": 71.6,
-  "sample_size": 9089
-}
+{"segment_id":null,"mean_speed":10.23,"median_speed":7.9,"std_dev":10.36,"percentile_25":3.95,"percentile_75":12.5,"min_speed":0.0,"max_speed":95.0,"sample_size":9493}
 ```
 
 ## Future Roadmap
