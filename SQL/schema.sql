@@ -28,6 +28,7 @@ CREATE TABLE traffic_readings (
     sensor_status ENUM('Ouvert', 'Barré', 'Invalide') NOT NULL,
     is_flow_imputed BOOLEAN DEFAULT FALSE,
     is_speed_corrected BOOLEAN DEFAULT FALSE,
+    correction_confidence VARCHAR(20) DEFAULT NULL,
     data_quality_flag VARCHAR(50),
     quality_score DECIMAL(3, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
