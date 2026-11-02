@@ -11,7 +11,7 @@ from api.database import execute_query
 from api.models import (
     PeakHourResponse,
     BusiestSegmentResponse,
-    SpeedStatsResponse,
+    OccupancyStatsResponse,
     QualityReportResponse,
     CongestionHotspotResponse
 )
@@ -25,7 +25,7 @@ def get_peak_hours(
     min_quality_score: float = Query(default=0.0, ge=0.0, le=1.0)
 ):
     """
-    Get traffic flow and speed by hour of day.
+    Get traffic flow and occupancy by hour of day.
     Useful for identifying peak congestion periods.
     """
     if segment_id:
@@ -33,7 +33,7 @@ def get_peak_hours(
         SELECT
             HOUR(timestamp) as hour,
             ROUND(AVG(traffic_flow), 2) as avg_flow,
-            ROUND(AVG(avg_speed), 2) as avg_speed,
+            ROUND(AVG(occupancy_rate), 2) as avg_occupancy,
             COUNT(*) as reading_count
         FROM traffic_readings
         WHERE segment_id = %s
@@ -47,7 +47,7 @@ def get_peak_hours(
         SELECT
             HOUR(timestamp) as hour,
             ROUND(AVG(traffic_flow), 2) as avg_flow,
-            ROUND(AVG(avg_speed), 2) as avg_speed,
+            ROUND(AVG(occupancy_rate), 2) as avg_occupancy,
             COUNT(*) as reading_count
         FROM traffic_readings
         WHERE quality_score >= %s
@@ -72,7 +72,7 @@ def get_busiest_segments(
         r.segment_id,
         s.street_name,
         ROUND(AVG(r.traffic_flow), 2) as avg_flow,
-        ROUND(AVG(r.avg_speed), 2) as avg_speed,
+        ROUND(AVG(r.occupancy_rate), 2) as avg_occupancy,
         COUNT(*) as reading_count
     FROM traffic_readings r
     JOIN road_segments s ON r.segment_id = s.segment_id
@@ -86,53 +86,53 @@ def get_busiest_segments(
     logger.info(f"GET /analytics/busiest-segments returned {len(results)} segments")
     return results
 
-@router.get("/speed-stats", response_model=SpeedStatsResponse)
-def get_speed_stats(
+@router.get("/occupancy-stats", response_model=OccupancyStatsResponse)
+def get_occupancy_stats(
     segment_id: Optional[str] = Query(default=None),
     min_quality_score: float = Query(default=0.0, ge=0.0, le=1.0)
 ):
     """
-    Calculate speed statistics using NumPy.
+    Calculate occupancy (k, % of the hour) statistics using NumPy.
     Returns mean, median, std deviation, and percentiles.
     """
     if segment_id:
         query = """
-        SELECT avg_speed FROM traffic_readings
-        WHERE avg_speed IS NOT NULL
+        SELECT occupancy_rate FROM traffic_readings
+        WHERE occupancy_rate IS NOT NULL
         AND segment_id = %s
         AND quality_score >= %s
         """
         results = execute_query(query, (segment_id, min_quality_score))
     else:
         query = """
-        SELECT avg_speed FROM traffic_readings
-        WHERE avg_speed IS NOT NULL
+        SELECT occupancy_rate FROM traffic_readings
+        WHERE occupancy_rate IS NOT NULL
         AND quality_score >= %s
         """
         results = execute_query(query, (min_quality_score,))
 
     if not results:
-        return SpeedStatsResponse(
+        return OccupancyStatsResponse(
             segment_id=segment_id,
-            mean_speed=0, median_speed=0, std_dev=0,
+            mean_occupancy=0, median_occupancy=0, std_dev=0,
             percentile_25=0, percentile_75=0,
-            min_speed=0, max_speed=0, sample_size=0
+            min_occupancy=0, max_occupancy=0, sample_size=0
         )
 
-    speeds = np.array([row['avg_speed'] for row in results], dtype=float)
+    occupancies = np.array([row['occupancy_rate'] for row in results], dtype=float)
 
-    logger.info(f"GET /analytics/speed-stats calculated stats for {len(speeds)} readings")
+    logger.info(f"GET /analytics/occupancy-stats calculated stats for {len(occupancies)} readings")
 
-    return SpeedStatsResponse(
+    return OccupancyStatsResponse(
         segment_id=segment_id,
-        mean_speed=round(float(np.mean(speeds)), 2),
-        median_speed=round(float(np.median(speeds)), 2),
-        std_dev=round(float(np.std(speeds)), 2),
-        percentile_25=round(float(np.percentile(speeds, 25)), 2),
-        percentile_75=round(float(np.percentile(speeds, 75)), 2),
-        min_speed=round(float(np.min(speeds)), 2),
-        max_speed=round(float(np.max(speeds)), 2),
-        sample_size=len(speeds)
+        mean_occupancy=round(float(np.mean(occupancies)), 2),
+        median_occupancy=round(float(np.median(occupancies)), 2),
+        std_dev=round(float(np.std(occupancies)), 2),
+        percentile_25=round(float(np.percentile(occupancies, 25)), 2),
+        percentile_75=round(float(np.percentile(occupancies, 75)), 2),
+        min_occupancy=round(float(np.min(occupancies)), 2),
+        max_occupancy=round(float(np.max(occupancies)), 2),
+        sample_size=len(occupancies)
     )
 
 @router.get("/quality-report", response_model=List[QualityReportResponse])
@@ -198,7 +198,7 @@ def get_traffic_by_hour(
     SELECT
         HOUR(timestamp) as hour,
         ROUND(AVG(traffic_flow), 2) as avg_flow,
-        ROUND(AVG(avg_speed), 2) as avg_speed,
+        ROUND(AVG(occupancy_rate), 2) as avg_occupancy,
         COUNT(*) as reading_count
     FROM traffic_readings
     WHERE segment_id = %s

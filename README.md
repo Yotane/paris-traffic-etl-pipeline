@@ -13,103 +13,68 @@ This dataset contains more than 5,000,000 observations of road traffic condition
 | `iu_ac` | String | Unique identifier for the road segment (arc) |
 | `libelle` | String | Human-readable street name (e.g., "Bd_de_Belleville") |
 | `t_1h` | Timestamp | Hourly observation time in ISO 8601 format (`2023-01-01T03:00:00+00:00`) |
-| `q` | Float | **Traffic flow**: vehicles per hour passing the sensor (frequently null due to sensor maintenance) |
-| `k` | Float | **Average speed** (km/h) frequently null due to sensor maintenance. Values <1 km/h corrected by ETL using multi-signal validation (decimal placement error). |
-| `etat_trafic` | String | **Traffic state**: `Fluide` (free-flow), `Dense` (congested), `Sature` (gridlock), or `Inconnu` (unknown) |
+| `q` | Float | **Traffic flow** (*débit*): number of vehicles counted during the hour (frequently null due to sensor maintenance) |
+| `k` | Float | **Occupancy rate** (*taux d'occupation*): percentage of the hour (0-100) during which the sensor loop is occupied by vehicles. **Not speed.** Frequently null due to sensor maintenance. Stored as `occupancy_rate`. |
+| `etat_trafic` | String | **Traffic state**, derived from `k` by the source: `Fluide` (k < 15%), `Pré-saturé` (15-30%), `Saturé` (30-50%), `Bloqué` (≥ 50%), or `Inconnu` (k missing) |
 | `iu_nd_amont` / `iu_nd_aval` | String | Upstream/downstream node IDs for network topology analysis |
-| `etat_barre` | String | Sensor validity flag: `Valide` or `Invalide` (used for data quality filtering) |
+| `etat_barre` | String | Sensor/road status: `Ouvert` (open), `Barré` (closed), or `Invalide` (used for data quality filtering) |
 | `geo_point_2d` | Object | Centroid coordinates `{lon, lat}` for mapping and spatial joins |
 | `geo_shape` | GeoJSON | `LineString` geometry defining the precise road segment path for geospatial visualization |
 
+**Note on `k`:** The Kaggle description (and earlier versions of this README) treat `k` as average speed in km/h. The original source, the Paris Open Data [permanent road counting dataset](https://opendata.paris.fr/explore/dataset/comptages-routiers-permanents/information/), defines it differently. Its notice describes `q` as "Débit (nombre de véhicules comptés pendant l'heure)" and `k` as "Taux d'occupation (en pourcentage de temps d'occupation de la station de mesure par des véhicules sur l'heure)". It also derives `etat_trafic` from `k` using the thresholds above. Occupancy is a proxy for traffic density, not speed.
 
 Originally sourced as a large nested JSON file, this cleaned and structured version has been preprocessed for ease of use in machine learning workflows. It includes both numerical traffic metrics (e.g., flow and speed) and categorical labels (e.g., traffic state), along with rich geospatial metadata.
 
 ## Data Quality
 However this dataset is very messy as it has a lot of missing data:
 q (flow): 52.4% missing
-k (speed): 51.6% missing
+k (occupancy): 51.6% missing
 Geospatial and date fields: 0.7% missing
 Duplicates: Present and should be removed before modeling.
 Class Imbalance: Present in etat_trafic and requires resampling or cost-sensitive learning.
 Upon checking, I found that there around 40.0% missing both q and k and around 80.0% of sensors are marked invalid.
-Most importantly, the dataset has a lot of decimal errors (speeds like 0.43 km/h should be 43 km/h).
 
-**Initial Observation:** Mean speed of 4.88 km/h and other instances seemed suspiciously low.
+### Retracted Hypothesis: "Decimal Errors" in k
+An earlier version of this pipeline treated `k` as speed in km/h, following the Kaggle description. Under that reading the data looked broken:
 
-**Hypothesis Testing:**
-Rather than blindly assuming a decimal error, I investigated whether low speeds could be legitimate (e.g., sensor failures, gridlock conditions).
+- The mean "speed" was 4.88 km/h.
+- All 5,603 records with k < 1 were marked `Fluide` (free-flowing).
+- Records such as Quai_Hotel_de_Ville (k = 0.18778, q = 406 veh/h, `Fluide`) seemed to show 406 cars/hour moving at walking pace.
 
-**Cross-validation with Traffic State:**
-```python
-# Analysis: speed_analysis.py
-# Key finding: ALL 5,603 records with speed < 1 km/h marked as "Fluide" (flowing)
-```
-**Evidence:**
+I concluded these were decimal placement errors. The ETL multiplied k by 100 when several "signals" agreed: k < 1, flow > 100, state `Fluide`, and sensor `Ouvert`. It then validated the results with a fundamental-diagram check (flow = density × speed).
 
-| Speed Range | Count | Traffic State | Interpretation |
-|-------------|-------|---------------|----------------|
-| 0-1 km/h | 5,603 | 100.0% Fluide | Impossible - can't flow at 0.5 km/h |
-| 1-10 km/h | 20,828 | 100.0% Fluide | Suspicious for all to be flowing |
-| 10-100 km/h | 3,372 | Mixed states | Normal distribution |
+**This hypothesis was wrong, and the correction has been removed.** `k` is occupancy, the percentage of the hour the sensor loop is occupied, and the source derives `etat_trafic` from it. `Fluide` means k < 15%, so a low k paired with `Fluide` is exactly what the definition predicts. A mean of 4.88% is a normal occupancy for mostly free-flowing traffic. The fundamental-diagram check did not apply as written, because occupancy is a proxy for density, not speed. The ×100 "correction" therefore changed 114 correct values in the Jan 1-2 data.
 
-**Best Example:**
-```
-Location: Quai_Hotel_de_Ville
-Speed: 0.18778 km/h (walking is 5 km/h)
-Flow: 406 cars/hour
-State: Fluide (flowing)
-406 cars/hour cannot flow at 0.19 km/h. After multiplying by 100 (to 18.78 km/h), this matches typical Paris congestion patterns.
-```
+**Evidence** ([occupancy_analysis.py](occupancy_analysis.py)): the official thresholds reproduce `etat_trafic` for every record that has a `k` value. `Inconnu` appears exactly when `k` is missing.
 
-### Production-Grade Decimal Error Correction
-Instead of a simple threshold-based fix, the ETL implements a multi-signal validation approach aligned with industry best practices:
+| Reported `etat_trafic` | State derived from k (Jan 1) | Count | Match |
+|------------------------|------------------------------|-------|-------|
+| Fluide | k < 15% | 28,388 | 100% |
+| Pré-saturé | 15% ≤ k < 30% | 1,125 | 100% |
+| Saturé | 30% ≤ k < 50% | 263 | 100% |
+| Bloqué | k ≥ 50% | 119 | 100% |
+| Inconnu | k missing | 32,727 | 100% |
 
-**Signal 1: Suspicious speed range**
-- Speed < 1 km/h is unrealistic for urban traffic (walking speed is ~5 km/h)
+Jan 2 shows the same result: 34,120 of 34,120 records with `k` match. The maximum `k` across both days is 98.9, consistent with a 0-100% scale.
 
-**Signal 2: Flow-speed physics check**
-- Using fundamental diagram: flow = density x speed
-- If speed ≈ 0 but flow > 100 veh/hr, implied density exceeds physical limits (~200 veh/km/lane)
+**What changed:**
+- `k` is loaded unchanged into `occupancy_rate` (previously `avg_speed`).
+- The `is_speed_corrected` and `correction_confidence` columns were dropped.
+- The flags built on the speed reading were removed: `CORRECTED_DECIMAL_ERROR_*`, `INCONSISTENT_STOPPED_WITH_FLOW` (q > 100 with k < 2, which is normal at 2% occupancy), `INCONSISTENT_EXTREME_FLOW_SPEED`, and `INCONSISTENT_SPEED_STATE`.
+- The outlier rule "k > 200 km/h" became "k outside 0-100%".
+- A new check, `INCONSISTENT_OCCUPANCY_STATE`, flags any record whose `etat_trafic` disagrees with the state derived from `k`.
 
-**Signal 3: Traffic state contradiction**
-- Records marked "Fluide" (flowing) cannot have speed < 1 km/h
-
-**Signal 4: Sensor operational status**
-- Exclude corrections for sensors already flagged as "Invalide"
-
-**Tiered Correction Strategy:**
-| Tier | Confidence | Criteria | Action | Quality Score |
-|------|-----------|----------|--------|--------------|
-| HIGH | Auto-correct | All 4 signals align | Multiply by 100, flag as corrected | 0.85 |
-| MEDIUM | Correct with caution | 3/4 signals align | Multiply by 100, flag for review | 0.70 |
-| LOW | Do not correct | Only speed signal | Flag as suspected error | 0.50 |
-
-**Post-Correction Validation:**
-After applying corrections, the pipeline validates results using:
-1. Range check: Corrected speeds must fall within 5-120 km/h (Paris urban road limits)
-2. Fundamental diagram check: Implied density (flow/speed) must not exceed 200 veh/km/lane
-3. Distribution check: Corrected mean should align with Paris benchmarks (13-17 km/h typical)
-
-**Conclusion:** Systematic decimal error confirmed. Corrected records using tiered strategy, flagged with confidence levels and quality scores for transparent downstream analytics. Implemented in transform.py as part of the ETL pipeline.
+**Lesson:** check the original data publisher's documentation, not only a secondary description, before "correcting" values that look implausible.
 
 ### Data Cleaning
-In the ETL, transform.py cleans and transforms raw traffic data with production-grade quality assessment:
-1. Multi-signal validation for decimal error detection (speed + flow + state + sensor status)
-2. Tiered correction strategy with confidence levels (HIGH/MEDIUM/LOW)
-3. Post-correction validation using traffic physics (fundamental diagram)
-4. Drop rows missing both flow and speed (no usable signal)
-5. Remove physically impossible outliers (speed > 200 km/h, negative flow)
-6. Extract structured GPS coordinates from nested GeoJSON
-7. Assign tiered quality flags using Paris-specific traffic engineering rules
-8. Split normalized output into dimension (segments) and fact (readings) tables
+In the ETL, transform.py cleans and transforms raw traffic data with tiered quality assessment:
+1. Drop rows missing both flow and occupancy (no usable signal)
+2. Remove physically impossible values (occupancy outside 0-100%, negative flow)
+3. Extract structured GPS coordinates from nested GeoJSON
+4. Assign tiered quality flags, including a consistency check of `etat_trafic` against the official occupancy thresholds
+5. Split normalized output into dimension (segments) and fact (readings) tables
 
 Three files for ETL: extract.py, transform.py, load.py. pipeline.py orchestrates execution.
-
-Furthermore, I researched real Paris traffic data to optimize quality flag thresholds in transform.py:
-- Paris average rush hour speed: 19 km/h
-- Typical Paris city speeds: 13-17 km/h
-- Urban arterial capacity: 1,100-1,900 veh/hr/lane
-- Maximum flow occurs at 40-60 km/h (not at very high speeds)
 
 ### Prerequisites
 - Python 3.13+
@@ -138,6 +103,12 @@ cp config.example.py config.py
 # Edit config.py with your MySQL password
 # (config.py is in .gitignore for security)
 ```
+
+**Upgrading an existing database** (created before the `k` = occupancy fix):
+```sql
+SOURCE SQL/migrations/001_k_is_occupancy.sql;
+```
+Then re-run `pipeline.py` for every date already loaded. The upsert overwrites the old ×100 "corrected" values and the speed-based quality flags.
 
 ### Run ETL Pipeline
 
@@ -178,28 +149,25 @@ JSON Source (Kaggle) -> Python ETL (pipeline.py) -> MySQL Database
 - **Total loaded:** 79,919 traffic readings across 2 days
 - **Processing time:** 7.13 seconds (Jan 1), 7.46 seconds (Jan 2); average 7.29 seconds per day
 - **Data quality:**
-  - Retained: 63.3% of raw records (after dropping rows missing both flow and speed)
+  - Retained: 63.3% of raw records (after dropping rows missing both flow and occupancy)
   - Dropped: 36.7% (missing core metrics or physically impossible values)
 - **Unique road segments:** 1,779 (stable across dates, confirms dimension table integrity)
-- **Decimal errors corrected:** 90 records using multi-signal validation (45 HIGH confidence, 45 MEDIUM confidence)
+- **Traffic state consistency:** 100% of readings with `k` match the state derived from the official occupancy thresholds (0 `INCONSISTENT_OCCUPANCY_STATE`)
 
-### Quality Distribution (Actual Database Results, Jan 1-2 Combined)
+### Quality Distribution (Jan 1-2 Combined)
 
 | Quality Flag | Count | Percentage | Quality Score |
 |-------------|-------|------------|---------------|
-| INVALID_SENSOR_HAS_DATA | 59,655 | 74.64% | 0.6 |
-| INCONSISTENT_STOPPED_WITH_FLOW | 9,769 | 12.22% | 0.4 |
-| OK | 6,756 | 8.45% | 1.0 |
+| INVALID_SENSOR_HAS_DATA | 68,998 | 86.33% | 0.6 |
+| OK | 7,579 | 9.48% | 1.0 |
 | MISSING_FLOW | 2,663 | 3.33% | 0.8 |
-| MISSING_SPEED | 679 | 0.85% | 0.8 |
-| INCONSISTENT_EXTREME_FLOW_SPEED | 258 | 0.32% | 0.3 |
-| CORRECTED_DECIMAL_ERROR_HIGH | 74 | 0.09% | 0.85 |
-| CORRECTED_DECIMAL_ERROR_MEDIUM | 40 | 0.05% | 0.7 |
-| INCONSISTENT_SPEED_STATE | 25 | 0.03% | 0.5 |
+| MISSING_OCCUPANCY | 679 | 0.85% | 0.8 |
 
 **Total readings:** 79,919 (sum of all counts)
 
-**Key Insight:** Only 8.45% of readings are "OK" quality, highlighting the real-world messiness of sensor data. The 74.64% flagged as `INVALID_SENSOR_HAS_DATA` reflects that most Paris traffic sensors were marked invalid in January 2023 but still reported data which is a common issue in municipal IoT deployments. The tiered correction approach (HIGH/MEDIUM confidence) enables downstream analysts to filter for high-confidence records when needed.
+These counts come from running the current transform.py over the Jan 1-2 files with the pipeline's chunking and the `(segment_id, timestamp)` upsert. Running the previous transform.py the same way reproduces the previously published database results exactly. Those results included 9,769 `INCONSISTENT_STOPPED_WITH_FLOW` and 114 `CORRECTED_DECIMAL_ERROR_*` readings, which were artifacts of the speed misreading described above.
+
+**Key Insight:** Only 9.48% of readings are "OK" quality, highlighting the real-world messiness of sensor data. The 86.33% flagged as `INVALID_SENSOR_HAS_DATA` reflects that most Paris traffic sensors were marked invalid in January 2023 but still reported data, which is a common issue in municipal IoT deployments.
 
 ### ETL Performance
 - **Pipeline throughput:** 9,200 records/second (134,190 records / 14.59 seconds total)
@@ -244,18 +212,18 @@ DELETE /readings/{id}         Delete reading
 ```
 GET /analytics/peak-hours             Traffic by hour
 GET /analytics/busiest-segments       Ranked by flow
-GET /analytics/speed-stats            NumPy statistics
+GET /analytics/occupancy-stats        NumPy occupancy statistics
 GET /analytics/quality-report         Data quality breakdown
 GET /analytics/congestion-hotspots    Blocked/saturated segments
 ```
 **Example Request:**
 ```bash
-curl "http://localhost:8000/analytics/speed-stats?min_quality_score=0.8"
+curl "http://localhost:8000/analytics/occupancy-stats?min_quality_score=0.8"
 ```
 
-**Actual Response (dataset was only January 1 and 2):**
+**Expected Response (January 1 and 2 data; values are occupancy in %):**
 ```json
-{"segment_id":null,"mean_speed":10.23,"median_speed":7.9,"std_dev":10.36,"percentile_25":3.95,"percentile_75":12.5,"min_speed":0.0,"max_speed":95.0,"sample_size":9493}
+{"segment_id":null,"mean_occupancy":9.13,"median_occupancy":7.15,"std_dev":8.47,"percentile_25":3.4,"percentile_75":11.8,"min_occupancy":0.0,"max_occupancy":71.6,"sample_size":10242}
 ```
 
 ## Future Roadmap

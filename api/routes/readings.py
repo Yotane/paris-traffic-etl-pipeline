@@ -83,7 +83,7 @@ def create_reading(reading: TrafficReadingCreate):
 
     query = """
     INSERT INTO traffic_readings
-    (segment_id, timestamp, traffic_flow, avg_speed, traffic_state, sensor_status)
+    (segment_id, timestamp, traffic_flow, occupancy_rate, traffic_state, sensor_status)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
     try:
@@ -91,7 +91,7 @@ def create_reading(reading: TrafficReadingCreate):
             reading.segment_id,
             reading.timestamp,
             reading.traffic_flow,
-            reading.avg_speed,
+            reading.occupancy_rate,
             reading.traffic_state,
             reading.sensor_status
         ))

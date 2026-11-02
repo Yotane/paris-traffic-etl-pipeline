@@ -29,7 +29,7 @@ class TrafficReadingBase(BaseModel):
     segment_id: str
     timestamp: datetime
     traffic_flow: Optional[int] = None
-    avg_speed: Optional[float] = None
+    occupancy_rate: Optional[float] = Field(default=None, ge=0, le=100)
     traffic_state: str
     sensor_status: str
 
@@ -39,7 +39,6 @@ class TrafficReadingCreate(TrafficReadingBase):
 class TrafficReadingResponse(TrafficReadingBase):
     reading_id: int
     is_flow_imputed: bool
-    is_speed_corrected: bool
     data_quality_flag: Optional[str] = None
     quality_score: Optional[float] = None
     created_at: Optional[datetime] = None
@@ -51,25 +50,25 @@ class TrafficReadingResponse(TrafficReadingBase):
 class PeakHourResponse(BaseModel):
     hour: int
     avg_flow: Optional[float] = None
-    avg_speed: Optional[float] = None
+    avg_occupancy: Optional[float] = None
     reading_count: int
 
 class BusiestSegmentResponse(BaseModel):
     segment_id: str
     street_name: str
     avg_flow: Optional[float] = None
-    avg_speed: Optional[float] = None
+    avg_occupancy: Optional[float] = None
     reading_count: int
 
-class SpeedStatsResponse(BaseModel):
+class OccupancyStatsResponse(BaseModel):
     segment_id: Optional[str] = None
-    mean_speed: float
-    median_speed: float
+    mean_occupancy: float
+    median_occupancy: float
     std_dev: float
     percentile_25: float
     percentile_75: float
-    min_speed: float
-    max_speed: float
+    min_occupancy: float
+    max_occupancy: float
     sample_size: int
 
 class QualityReportResponse(BaseModel):
