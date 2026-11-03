@@ -156,12 +156,16 @@ JSON Source (Kaggle) -> Python ETL (pipeline.py) -> MySQL Database
 
 ### Quality Distribution (Jan 1-2 Combined)
 
-| Quality Flag | Count | Percentage | Quality Score |
-|-------------|-------|------------|---------------|
-| INVALID_SENSOR_HAS_DATA | 68,998 | 86.33% | 0.6 |
-| OK | 7,579 | 9.48% | 1.0 |
-| MISSING_FLOW | 2,663 | 3.33% | 0.8 |
-| MISSING_OCCUPANCY | 679 | 0.85% | 0.8 |
+Each reading gets the flag of the first rule it matches, checked in the order shown in the "Check Order" column. Rows are sorted by increasing quality score.
+
+| Score | Flag | Rule | Check Order | Jan 1-2 |
+|-------|------|------|-------------|---------|
+| 0.1 | `INVALID_SENSOR_NO_DATA` | Sensor is `Invalide` and sent neither `q` nor `k` | 2 | 0 (already dropped in cleaning step 1) |
+| 0.5 | `INCONSISTENT_OCCUPANCY_STATE` | `k` exists, but `etat_trafic` is not the state the official thresholds give for that `k` | 1 | 0 |
+| 0.6 | `INVALID_SENSOR_HAS_DATA` | Sensor is `Invalide` but still sent `q` or `k` | 2 | 68,998 (86.33%) |
+| 0.8 | `MISSING_FLOW` | `q` missing, `k` present | 3 | 2,663 (3.33%) |
+| 0.8 | `MISSING_OCCUPANCY` | `k` missing, `q` present | 3 | 679 (0.85%) |
+| 1.0 | `OK` | None of the above | 4 | 7,579 (9.48%) |
 
 **Total readings:** 79,919 (sum of all counts)
 
